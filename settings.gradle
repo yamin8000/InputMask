@@ -1,1 +1,1 @@
-include ':app', ':MaskedEditText'
+include ':app', ':InputMask'
