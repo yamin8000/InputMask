@@ -271,9 +271,9 @@ public class MaskedEditText extends AppCompatEditText implements TextWatcher {
     @NonNull
     @Override
     public Parcelable onSaveInstanceState() {
-        final Parcelable superParcellable = super.onSaveInstanceState();
+        final Parcelable superParcelable = super.onSaveInstanceState();
         final Bundle state = new Bundle();
-        state.putParcelable("super", superParcellable);
+        state.putParcelable("super", superParcelable);
         state.putString("text", getRawText());
         state.putBoolean("keepHint", isKeepHint());
         return state;
