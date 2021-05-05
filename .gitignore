@@ -75,3 +75,5 @@ proguard/
 
 # Log Files
 *.log
+/InputMask/gradle.properties
+InputMask/gpg-keys/
