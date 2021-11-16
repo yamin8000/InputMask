@@ -10,48 +10,47 @@ import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.util.AttributeSet
 import android.widget.TextView.OnEditorActionListener
-import androidx.appcompat.widget.AppCompatEditText
+import com.google.android.material.textfield.TextInputEditText
 
-class MaskedEditText : AppCompatEditText, TextWatcher {
-    
+class MaskedEditText : TextInputEditText, TextWatcher {
+
     private val onEditorActionListener = OnEditorActionListener { _, _, _ -> true }
     private var maxRawLength = 0
-    private lateinit var mask : String
+    private lateinit var mask: String
     private var charRepresentation = 0.toChar()
     private var keepHint = false
-    private lateinit var rawToMask : IntArray
-    private lateinit var rawText : RawText
+    private lateinit var rawToMask: IntArray
+    private lateinit var rawText: RawText
     private var editingBefore = false
     private var editingOnChanged = false
     private var editingAfter = false
-    private lateinit var maskToRaw : IntArray
+    private lateinit var maskToRaw: IntArray
     private var selectionIndex = 0
     private var initialized = false
     private var ignore = false
     private var lastValidMaskPosition = 0
     private var selectionChanged = false
-    private lateinit var focusChangeListener : OnFocusChangeListener
-    private lateinit var allowedChars : String
-    private lateinit var deniedChars : String
+    private lateinit var focusChangeListener: OnFocusChangeListener
+    private lateinit var allowedChars: String
+    private lateinit var deniedChars: String
     private var isKeepingText = false
-    
+
     init {
         addTextChangedListener(this)
     }
-    
-    constructor(context : Context) : super(context)
-    
-    constructor(context : Context, attrs : AttributeSet, defStyle : Int) : super(context, attrs, defStyle)
-    
-    constructor(context : Context, attrs : AttributeSet) : super(context, attrs) {
+
+    constructor(context: Context) : super(context)
+
+    constructor(context: Context, attrs: AttributeSet, defStyle: Int) : super(context, attrs, defStyle)
+
+    constructor(context: Context, attrs: AttributeSet) : super(context, attrs) {
         val attributes = context.obtainStyledAttributes(attrs, R.styleable.MaskedEditText)
         mask = attributes.getString(R.styleable.MaskedEditText_mask) ?: ""
         allowedChars = attributes.getString(R.styleable.MaskedEditText_allowed_chars) ?: ""
         deniedChars = attributes.getString(R.styleable.MaskedEditText_denied_chars) ?: ""
         val enableImeAction = attributes.getBoolean(R.styleable.MaskedEditText_enable_ime_action, false)
         val representation = attributes.getString(R.styleable.MaskedEditText_char_representation)
-        charRepresentation = (if (representation == null) CONSTANTS.NUM_SIGN
-        else representation[0])
+        charRepresentation = if (representation == null) CONSTANTS.NUM_SIGN else representation[0]
         keepHint = attributes.getBoolean(R.styleable.MaskedEditText_keep_hint, false)
         cleanUp()
         // Ignoring enter key presses if needed
@@ -59,7 +58,7 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         else setOnEditorActionListener(onEditorActionListener)
         attributes.recycle()
     }
-    
+
     private fun cleanUp() {
         initialized = false
         if (mask.isEmpty()) return
@@ -87,7 +86,7 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
             }
         }
     }
-    
+
     /**
      * Generates positions for values characters. For instance:
      * Input data: mask = "+7(###)###-##-##
@@ -118,18 +117,22 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         rawToMask = IntArray(charIndex)
         System.arraycopy(aux, 0, rawToMask, 0, charIndex)
     }
-    
-    private fun makeMaskedTextWithHint() : CharSequence {
+
+    //ambiguous method
+    private fun makeMaskedTextWithHint(): CharSequence {
         val ssb = SpannableStringBuilder()
         //what's this?
-        var mtrv : Int
+        var mtrv: Int
         val maskFirstChunkEnd = rawToMask[0]
         for (i in mask.indices) {
             mtrv = maskToRaw[i]
             if (mtrv == -1) ssb.append(mask[i])
             else {
                 if (mtrv < rawText.getLength()) ssb.append(rawText.charAt(mtrv))
-                else ssb.append(hint[maskToRaw[i]])
+                else {
+                    val hintString = hint.toString()
+                    ssb.append(hintString[maskToRaw[i]])
+                }
             }
             if (keepHint && rawText.getLength() < rawToMask.size && i >= rawToMask[rawText.getLength()] || !keepHint && i >= maskFirstChunkEnd) {
                 ssb.setSpan(ForegroundColorSpan(currentHintTextColor), i, i + 1, 0)
@@ -137,13 +140,12 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         }
         return ssb
     }
-    
-    private fun makeMaskedText() : String {
+
+    private fun makeMaskedText(): String {
         val maskedTextLength = if (rawText.getLength() < rawToMask.size) rawToMask[rawText.getLength()]
         else mask.length
-        
+
         val maskedText = CharArray(maskedTextLength)
-        //mask.replace(charRepresentation, ' ').toCharArray();
         for (i in maskedText.indices) {
             val rawIndex = maskToRaw[i]
             if (rawIndex == -1) maskedText[i] = mask[i]
@@ -151,8 +153,8 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         }
         return String(maskedText)
     }
-    
-    private fun previousValidPosition(currentPosition : Int) : Int {
+
+    private fun previousValidPosition(currentPosition: Int): Int {
         var newPosition = currentPosition
         while (newPosition >= 0 && maskToRaw[newPosition] == -1) {
             newPosition--
@@ -160,29 +162,29 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         }
         return newPosition
     }
-    
-    private fun findLastValidMaskPosition() : Int {
+
+    private fun findLastValidMaskPosition(): Int {
         for (index in maskToRaw.indices.reversed()) if (maskToRaw[index] != -1) return index
         throw RuntimeException("Mask must contain at least one representation char")
     }
-    
-    private fun lastValidPosition() : Int {
+
+    private fun lastValidPosition(): Int {
         return if (rawText.getLength() == maxRawLength) rawToMask[rawText.getLength() - 1] + 1
         else nextValidPosition(rawToMask[rawText.getLength()])
     }
-    
-    private fun nextValidPosition(currentPosition : Int) : Int {
+
+    private fun nextValidPosition(currentPosition: Int): Int {
         var nextPosition = currentPosition
         while (nextPosition < lastValidMaskPosition && maskToRaw[nextPosition] == -1) nextPosition++
         return if (nextPosition > lastValidMaskPosition) lastValidMaskPosition + 1
         else nextPosition
     }
-    
-    override fun setText(text : CharSequence, type : BufferType) {
+
+    override fun setText(text: CharSequence, type: BufferType) {
         super.setText(text, type)
     }
-    
-    override fun onSaveInstanceState() : Parcelable {
+
+    override fun onSaveInstanceState(): Parcelable {
         val superParcelable = super.onSaveInstanceState()
         val state = Bundle()
         state.putParcelable("super", superParcelable)
@@ -190,27 +192,27 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         state.putBoolean("keepHint", isKeepHint())
         return state
     }
-    
+
     private fun hasHint() = hint != null
-    
+
     fun getRawText() = rawText.getText()
-    
+
     fun isKeepHint() = keepHint
-    
-    fun setKeepHint(keepHint : Boolean) {
+
+    fun setKeepHint(keepHint: Boolean) {
         this.keepHint = keepHint
         setText(getRawText())
     }
-    
-    override fun onRestoreInstanceState(state : Parcelable) {
+
+    override fun onRestoreInstanceState(state: Parcelable) {
         val bundle = state as Bundle
         keepHint = bundle.getBoolean("keepHint", false)
         super.onRestoreInstanceState(state.getParcelable("super"))
         val text = bundle.getString("text")
         setText(text)
     }
-    
-    override fun onTextChanged(s : CharSequence, start : Int, before : Int, count : Int) {
+
+    override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
         var newCount = count
         if (!editingOnChanged && editingBefore) {
             editingOnChanged = true
@@ -220,15 +222,16 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
                 val addedString = s.subSequence(start, start + newCount).toString()
                 newCount = rawText.addToString(filterText(addedString), startingPosition, maxRawLength)
                 if (initialized) {
-                    val currentPosition = if (startingPosition + newCount < rawToMask.size) rawToMask[startingPosition + newCount]
-                    else lastValidMaskPosition + 1
+                    val currentPosition =
+                        if (startingPosition + newCount < rawToMask.size) rawToMask[startingPosition + newCount]
+                        else lastValidMaskPosition + 1
                     selectionIndex = nextValidPosition(currentPosition)
                 }
             }
         }
     }
-    
-    private fun filterText(text : String) : String {
+
+    private fun filterText(text: String): String {
         var newText = text
         for (deniedChar in deniedChars) newText = newText.replace("$deniedChar", "")
         val builder = StringBuilder(newText.length)
@@ -236,8 +239,8 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         newText = "$builder"
         return newText
     }
-    
-    override fun onSelectionChanged(selStart : Int, selEnd : Int) {
+
+    override fun onSelectionChanged(selStart: Int, selEnd: Int) {
         // On Android 4+ this method is being called more than 1 time if there is a hint in the EditText, what moves the cursor to left
         // Using the boolean var selectionChanged to limit to one execution
         var selStart = selStart
@@ -253,11 +256,11 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
             } else {
                 selStart = fixSelection(selStart)
                 selEnd = fixSelection(selEnd)
-                
+
                 // exactly in this order. If getText.length() == 0 then selStart will be -1
                 if (selStart > text!!.length) selStart = text!!.length
                 if (selStart < 0) selStart = 0
-                
+
                 // exactly in this order. If getText.length() == 0 then selEnd will be -1
                 if (selEnd > text!!.length) selEnd = text!!.length
                 if (selEnd < 0) selEnd = 0
@@ -267,43 +270,44 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
         }
         super.onSelectionChanged(selStart, selEnd)
     }
-    
-    private fun fixSelection(selection : Int) : Int {
+
+    private fun fixSelection(selection: Int): Int {
         return if (selection > lastValidPosition()) lastValidPosition()
         else nextValidPosition(selection)
     }
+
     /**
      * @param listener - its onFocusChange() method will be called before performing MaskedEditText operations,
      * related to this event.
      */
-    override fun setOnFocusChangeListener(listener : OnFocusChangeListener) {
+    override fun setOnFocusChangeListener(listener: OnFocusChangeListener) {
         focusChangeListener = listener
     }
-    
-    fun setShouldKeepText(shouldKeepText : Boolean) {
+
+    fun setShouldKeepText(shouldKeepText: Boolean) {
         isKeepingText = shouldKeepText
     }
-    
+
     fun getMask() = mask
-    
-    fun setMask(mask : String) {
+
+    fun setMask(mask: String) {
         this.mask = mask
         cleanUp()
     }
-    
-    fun setImeActionEnabled(isEnabled : Boolean) {
+
+    fun setImeActionEnabled(isEnabled: Boolean) {
         if (isEnabled) setOnEditorActionListener(onEditorActionListener)
         else setOnEditorActionListener(null)
     }
-    
+
     fun getCharRepresentation() = charRepresentation
-    
-    fun setCharRepresentation(charRepresentation : Char) {
+
+    fun setCharRepresentation(charRepresentation: Char) {
         this.charRepresentation = charRepresentation
         cleanUp()
     }
-    
-    override fun beforeTextChanged(s : CharSequence, start : Int, count : Int, after : Int) {
+
+    override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
         if (!editingBefore) {
             editingBefore = true
             if (start > lastValidMaskPosition) ignore = true
@@ -314,8 +318,8 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
             if (count > 0) selectionIndex = previousValidPosition(start)
         }
     }
-    
-    override fun afterTextChanged(editableString : Editable) {
+
+    override fun afterTextChanged(editableString: Editable) {
         if (!editingAfter && editingBefore && editingOnChanged) {
             editingAfter = true
             if (hasHint() && (keepHint || rawText.getLength() == 0)) setText(makeMaskedTextWithHint())
@@ -328,14 +332,14 @@ class MaskedEditText : AppCompatEditText, TextWatcher {
             ignore = false
         }
     }
-    
-    private fun erasingStart(start : Int) : Int {
+
+    private fun erasingStart(start: Int): Int {
         var newStart = start
         while (newStart > 0 && maskToRaw[newStart] == -1) newStart--
         return newStart
     }
-    
-    private fun calculateRange(start : Int, end : Int) : Range {
+
+    private fun calculateRange(start: Int, end: Int): Range {
         val range = Range()
         var i = start
         while (i <= end && i < mask.length) {
