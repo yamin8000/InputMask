@@ -61,6 +61,7 @@ class MaskedEditText : TextInputEditText, TextWatcher {
 
     private fun cleanUp() {
         initialized = false
+        //TODO wtf return
         if (mask.isEmpty()) return
         generatePositionArrays()
         if (!isKeepingText) {
@@ -231,13 +232,19 @@ class MaskedEditText : TextInputEditText, TextWatcher {
         }
     }
 
+    /**
+     * Filter text based on allowed and denied characters,
+     * denied characters have priority over allowed characters
+     *
+     * @param text
+     * @return
+     */
     private fun filterText(text: String): String {
-        var newText = text
-        for (deniedChar in deniedChars) newText = newText.replace("$deniedChar", "")
-        val builder = StringBuilder(newText.length)
-        for (char in newText) if (allowedChars.contains("$char")) builder.append(char)
-        newText = "$builder"
-        return newText
+        var tempText = text
+        for (deniedChar in deniedChars) tempText = tempText.replace("$deniedChar", "")
+        val builder = StringBuilder(tempText.length)
+        for (char in tempText) if (char in allowedChars) builder.append(char)
+        return builder.toString()
     }
 
     override fun onSelectionChanged(selStart: Int, selEnd: Int) {
